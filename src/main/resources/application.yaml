@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: t1aspect
+  datasource:
+    url: jdbc:postgresql://localhost:5432/invocations
+    username: postgres
+    password: postgres
+  jpa:
+    show-sql: true
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+      format-sql: true
