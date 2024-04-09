@@ -25,6 +25,7 @@ public class Invocation {
 	@NotNull
 	private Instant start;
 	private Instant finish;
+	private Long durationNanos;
 
 	private String exceptionType;
 	private String exceptionMessage;

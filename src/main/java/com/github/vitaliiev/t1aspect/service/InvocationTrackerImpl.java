@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.Callable;
 
@@ -33,16 +34,23 @@ public class InvocationTrackerImpl implements InvocationTracker {
 
 	@Override
 	public Invocation registerSuccess(Invocation invocation) {
-		invocation.setFinish(Instant.now());
+		setFinish(invocation);
 		return invocation;
 	}
 
 	@Override
 	public Invocation registerFail(Invocation invocation, Throwable throwable) {
-		invocation.setFinish(Instant.now());
+		setFinish(invocation);
 		invocation.setExceptionType(throwable.getClass().getName());
 		invocation.setExceptionMessage(throwable.getMessage());
 		return invocation;
+	}
+
+	private void setFinish(Invocation invocation) {
+		Instant finish = Instant.now();
+		long nanos = Duration.between(invocation.getStart(), finish).toNanos();
+		invocation.setFinish(finish);
+		invocation.setDurationNanos(nanos);
 	}
 
 	@Override

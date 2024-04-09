@@ -1,0 +1,211 @@
+openapi: 3.0.3
+info:
+  title: Invocation API
+  description: Invocation API
+  version: 0.0.1
+servers:
+  - url: 'http://localhost:8080/api/v1'
+    description: Development server
+security:
+  - basic: []
+
+tags:
+  - name: Invoke
+    description: Вызов функции
+  - name: Statistics
+    description: Получение статистики о вызовах
+paths:
+
+  /invoke:
+    get:
+      tags:
+        - Invoke
+      description: Синхронный вызов
+      operationId: invoke
+      responses:
+        '200':
+          description: Successful
+    parameters:
+      - name: millis
+        in: query
+        description: Задержка
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: async
+        in: query
+        description: Асинхронный
+        required: false
+        schema:
+          type: boolean
+
+  /stats:
+    get:
+      tags:
+        - Statistics
+      description: Получить статистику по имени сервиса
+      operationId: getStats
+      parameters:
+        - name: from
+          in: query
+          description: Начиная с даты
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: До с даты
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MethodInvocations'
+
+
+  /stats/{service}:
+    get:
+      tags:
+        - Statistics
+      description: Получить статистику по имени сервиса
+      operationId: getServiceStats
+      parameters:
+        - $ref: '#/components/parameters/service'
+        - $ref: '#/components/parameters/from'
+        - $ref: '#/components/parameters/to'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MethodInvocations'
+
+
+  /stats/{service}/{method}:
+    get:
+      tags:
+        - Statistics
+      description: Получить статистику по имени сервиса и метода
+      operationId: getMethodStats
+      parameters:
+        - $ref: '#/components/parameters/service'
+        - $ref: '#/components/parameters/method'
+        - $ref: '#/components/parameters/from'
+        - $ref: '#/components/parameters/to'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MethodInvocations'
+
+components:
+  schemas:
+    MethodInvocations:
+      type: array
+      description: Статистика по вызовам методов
+      items:
+        $ref: '#/components/schemas/MethodInvocation'
+
+    MethodInvocation:
+      type: object
+      description: Статистика по вызову метода
+      properties:
+        serviceName:
+          type: string
+          description: Наименование сервиса
+        methodName:
+          type: string
+          description: Наименование метода
+        invocations:
+          type: integer
+          format: int64
+          description: Кол-во вызовов
+        successful:
+          type: integer
+          format: int64
+          description: Кол-во успешных вызовов
+        failed:
+          type: integer
+          format: int64
+          description: Кол-во неуспешных вызовов
+        unfinished:
+          type: integer
+          format: int64
+          description: Кол-во незавершенных вызовов
+        invocationsAvg:
+          type: number
+          format: double
+          description: Среднее время всех вызовов
+        successfulAvg:
+          type: number
+          format: double
+          description: Среднее время успешных вызовов
+        failedAvg:
+          type: number
+          format: double
+          description: Среднее время неуспешных вызовов
+      required:
+        - serviceName
+        - methodName
+        - invocations
+        - successful
+        - failed
+        - unfinished
+        - invocationsAvg
+        - successfulAvg
+        - failedAvg
+
+  parameters:
+    millis:
+      name: millis
+      in: path
+      description: Задержка
+      required: true
+      schema:
+        type: integer
+        format: int32
+    service:
+      name: service
+      in: path
+      description: Наименование сервиса
+      required: true
+      schema:
+        type: string
+    method:
+      name: method
+      in: path
+      description: Наименование метода
+      required: true
+      schema:
+        type: string
+    from:
+      name: from
+      in: query
+      description: Начиная с даты
+      required: false
+      schema:
+        type: string
+        format: date
+    to:
+      name: to
+      in: query
+      description: До с даты
+      required: false
+      schema:
+        type: string
+        format: date
+  securitySchemes:
+    basic:
+      type: http
+      scheme: basic
+      description: http basic authentication. Try admin:admin
