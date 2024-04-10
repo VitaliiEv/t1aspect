@@ -40,19 +40,39 @@ public class TrackAspect {
 
 	@Around(value = "trackTime()")
 	public Object aroundTrackTime(ProceedingJoinPoint proceedingJoinPoint) {
-		Invocation invocation = createInvocation(proceedingJoinPoint);
-		return invokeAndTrack(proceedingJoinPoint, invocation);
+		CompletableFuture<Invocation> invocation = createInvocation(proceedingJoinPoint);
+		try {
+			Object result = proceedingJoinPoint.proceed();
+			invocation.thenCompose(invocationTracker::registerSuccess);
+			return result;
+		} catch (Throwable e) {
+			invocation.thenCompose(i -> invocationTracker.registerFail(i, e));
+			throw new TrackException(e);
+		}
 	}
 
 	@Around(value = "trackAsyncTime()")
 	public CompletableFuture<Object> aroundTrackAsyncTime(ProceedingJoinPoint proceedingJoinPoint) {
-		Invocation invocation = createInvocation(proceedingJoinPoint);
-		Callable<Object> invokeAndTrack = () -> invokeAndTrack(proceedingJoinPoint, invocation);
-		Callable<Object> task = new DelegatingSecurityContextCallable<>(invokeAndTrack);
-		return executor.submitCompletable(task);
+		CompletableFuture<Invocation> invocation = createInvocation(proceedingJoinPoint);
+		try {
+			Callable<Object> task = getTask(proceedingJoinPoint);
+			return executor.submitCompletable(task)
+					.whenComplete((o, t) -> {
+						if (t != null) {
+							invocation.thenCompose(i -> invocationTracker.registerFail(i, t));
+							log.error("Exception occurred while processing async method: {}", t.getMessage());
+						} else {
+							invocation.thenCompose(invocationTracker::registerSuccess);
+						}
+					});
+		} catch (Throwable e) {
+			invocation.thenCompose(i -> invocationTracker.registerFail(i, e));
+			throw new TrackException(e);
+		}
+
 	}
 
-	private Invocation createInvocation(ProceedingJoinPoint proceedingJoinPoint) {
+	private CompletableFuture<Invocation> createInvocation(ProceedingJoinPoint proceedingJoinPoint) {
 		Signature signature = proceedingJoinPoint.getSignature();
 		String serviceName = signature.getDeclaringTypeName();
 		String methodName = signature.getName();
@@ -60,17 +80,14 @@ public class TrackAspect {
 		return invocationTracker.registerStart(serviceName, methodName, invokedBy);
 	}
 
-	private Object invokeAndTrack(ProceedingJoinPoint proceedingJoinPoint, Invocation invocation) {
-		try {
-			Object result = proceedingJoinPoint.proceed();
-			invocation = invocationTracker.registerSuccess(invocation);
-			return result;
-		} catch (Throwable e) {
-			invocation = invocationTracker.registerFail(invocation, e);
-			throw new TrackException(e);
-		} finally {
-			invocationTracker.submit(invocation);
-		}
+	private Callable<Object> getTask(ProceedingJoinPoint proceedingJoinPoint) {
+		return new DelegatingSecurityContextCallable<>(() ->{
+			try {
+				return proceedingJoinPoint.proceed();
+			} catch (Throwable e) {
+				throw new TrackException(e);
+			}
+		});
 	}
 
 }

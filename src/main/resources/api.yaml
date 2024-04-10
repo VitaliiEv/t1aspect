@@ -39,7 +39,12 @@ paths:
         required: false
         schema:
           type: boolean
-
+      - name: fail
+        in: query
+        description: Завершиться с ошибкой
+        required: false
+        schema:
+          type: boolean
   /stats:
     get:
       tags:

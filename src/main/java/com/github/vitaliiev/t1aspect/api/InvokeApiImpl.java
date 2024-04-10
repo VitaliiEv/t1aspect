@@ -12,12 +12,12 @@ public class InvokeApiImpl implements InvokeApiDelegate {
 	InvocationBean invocationBean;
 
 	@Override
-	public ResponseEntity<Void> invoke(Integer millis, Boolean async) {
+	public ResponseEntity<Void> invoke(Integer millis, Boolean async, Boolean fail) {
 		int delay = millis == null ? 1000 : millis;
 		if (Boolean.TRUE.equals(async)) {
-			invocationBean.invokeAsync(delay);
+			invocationBean.invokeAsync(delay, Boolean.TRUE.equals(fail));
 		} else {
-			invocationBean.invoke(delay);
+			invocationBean.invoke(delay, Boolean.TRUE.equals(fail));
 		}
 		return ResponseEntity.ok(null);
 	}
